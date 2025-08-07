@@ -1,4 +1,5 @@
-# docker-compose.yml
+version: '3.8'
+
 services:
   employee-db:
     image: mysql:8.0
@@ -40,6 +41,20 @@ services:
       - .env
     ports:
       - "8000:8000"
+    networks:
+      - soa-net
+
+  thumbnail-function:
+    build:
+      context: ./thumbnail-function
+      dockerfile: Dockerfile        # see note below
+    container_name: thumbnail-function
+    depends_on:
+      - minio
+    env_file:
+      - .env
+    ports:
+      - "8001:8000"               # map host 8001 → container 8000
     networks:
       - soa-net
 
