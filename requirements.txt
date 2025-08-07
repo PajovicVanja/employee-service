@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic[email]
+python-multipart
+python-dotenv
+minio
+pymysql
+PyJWT
+cryptography
+httpx
+strawberry-graphql
+pytest
+pytest-asyncio

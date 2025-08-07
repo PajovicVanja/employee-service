@@ -1,0 +1,52 @@
+# docker-compose.yml
+services:
+  employee-db:
+    image: mysql:8.0
+    container_name: employee-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: employee_db
+      MYSQL_USER: employee_user
+      MYSQL_PASSWORD: employeepass
+    volumes:
+      - employee-db-data:/var/lib/mysql
+    networks:
+      - soa-net
+
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: minio
+    command: server /data
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"
+    networks:
+      - soa-net
+
+  employee-svc:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: employee-svc
+    depends_on:
+      - employee-db
+      - minio
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    networks:
+      - soa-net
+
+volumes:
+  employee-db-data:
+  minio-data:
+
+networks:
+  soa-net:
+    driver: bridge
