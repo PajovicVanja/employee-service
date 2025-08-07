@@ -1,14 +1,24 @@
-from fastapi import FastAPI, Request
-from pydantic import BaseModel
+# welcome-email-function/handler.py
+import json
+from fastapi import FastAPI, Request, HTTPException
+from pydantic import BaseModel, EmailStr
 
-class EmailRequest(BaseModel):
-    email: str
+class Payload(BaseModel):
+    email: EmailStr
     name: str
 
 app = FastAPI()
 
-@app.post("/", status_code=200)
-async def handler(req: EmailRequest):
-    # insert real email logic here...
-    print(f"DEBUG: Sending welcome email to {req.name} <{req.email}>")
-    return {"message": f"Welcome email sent to {req.email}"}
+@app.post("/")
+async def send_welcome(request: Request):
+    # parse + validate JSON body
+    try:
+        body = await request.json()
+        data = Payload(**body)
+    except Exception as e:
+        raise HTTPException(400, f"Invalid payload: {e}")
+
+    # your “real” email-sending logic goes here…
+    print(f"DEBUG: Sending welcome email to {data.name} <{data.email}>")
+
+    return {"message": f"Welcome email sent to {data.email}"}
