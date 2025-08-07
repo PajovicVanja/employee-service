@@ -12,3 +12,4 @@ httpx
 strawberry-graphql
 pytest
 pytest-asyncio
+Pillow

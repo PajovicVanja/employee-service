@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # ─── MySQL database ───────────────────────────────────────────
   employee-db:
     image: mysql:8.0
     container_name: employee-db
@@ -15,20 +16,7 @@ services:
     networks:
       - soa-net
 
-  minio:
-    image: quay.io/minio/minio:latest
-    container_name: minio
-    command: server /data
-    environment:
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-    volumes:
-      - minio-data:/data
-    ports:
-      - "9000:9000"
-    networks:
-      - soa-net
-
+  # ─── Your FastAPI app ─────────────────────────────────────────
   employee-svc:
     build:
       context: .
@@ -36,31 +24,18 @@ services:
     container_name: employee-svc
     depends_on:
       - employee-db
-      - minio
     env_file:
       - .env
     ports:
       - "8000:8000"
-    networks:
-      - soa-net
-
-  thumbnail-function:
-    build:
-      context: ./thumbnail-function
-      dockerfile: Dockerfile        # see note below
-    container_name: thumbnail-function
-    depends_on:
-      - minio
-    env_file:
-      - .env
-    ports:
-      - "8001:8000"               # map host 8001 → container 8000
+    # mount local storage for originals & thumbnails
+    volumes:
+      - ./storage:/storage
     networks:
       - soa-net
 
 volumes:
   employee-db-data:
-  minio-data:
 
 networks:
   soa-net:
