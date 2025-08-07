@@ -2,4 +2,4 @@ fastapi
 uvicorn[standard]
 minio
 Pillow
-python-multipar
+python-multipart
