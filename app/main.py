@@ -7,33 +7,25 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import OperationalError
 
-# load environment
+# load .env
 load_dotenv()
 
 from app.database import engine, Base
 from app.auth import verify_jwt_token
-import app.models  # noqa: register models
+import app.models  # noqa: ensure models are registered
 
 # routers
 from app.routers import auth, employees, availability, skills
 
-# GraphQL
+# graphql
 import strawberry
 from strawberry.asgi import GraphQL
 from app.graphql.schema import schema
 
 app = FastAPI(
     title="Employee Service",
-    description="Manages employees, availability slots and skills. All endpoints are JWT-protected.",
+    description="Manages employees, availability slots and skills. All endpoints are JWT‐protected.",
     version="1.0.0",
-    openapi_tags=[
-        {"name": "health",       "description": "Service health check"},
-        {"name": "auth",         "description": "Authentication"},
-        {"name": "employees",    "description": "Employee CRUD"},
-        {"name": "availability", "description": "Manage availability slots"},
-        {"name": "skills",       "description": "Manage employee skills"},
-        {"name": "graphql",      "description": "GraphQL API"},
-    ],
 )
 
 # CORS
@@ -44,7 +36,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# serve storage folder under /files
+# ─── static files mount ────────────────────────────────────────────────────────
+# serve everything under STORAGE_PATH as /files
 app.mount(
     "/files",
     StaticFiles(directory=os.getenv("STORAGE_PATH", "storage")),
@@ -53,14 +46,13 @@ app.mount(
 
 @app.on_event("startup")
 def on_startup():
-    # wait for MySQL to be ready
+    # wait for DB
     for _ in range(10):
         try:
             with engine.connect():
                 break
         except OperationalError:
             time.sleep(2)
-    # create tables
     Base.metadata.create_all(bind=engine)
 
 @app.get("/health", tags=["health"], summary="Health check")
@@ -74,7 +66,7 @@ app.include_router(auth.router, tags=["auth"])
 graphql_app = GraphQL(schema)
 app.mount("/graphql", graphql_app, name="graphql")
 
-# REST routers (JWT-protected)
+# REST (JWT‐protected)
 app.include_router(
     employees.router,
     prefix="/employees",
