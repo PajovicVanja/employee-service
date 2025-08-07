@@ -1,8 +1,9 @@
 # app/routers/employees.py
+
 import os
 import httpx
 
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, status, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, BackgroundTasks, status
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -12,6 +13,7 @@ from app.services.interop_client import ReservationServiceClient
 
 router = APIRouter()
 
+
 @router.get(
     "/",
     response_model=List[schemas.EmployeeOut],
@@ -20,6 +22,7 @@ router = APIRouter()
 )
 def read_employees(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return crud.get_employees(db, skip, limit)
+
 
 @router.get(
     "/{employee_id}",
@@ -33,7 +36,7 @@ def read_employee(employee_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
     return emp
 
-# ── New: fetch reservations from another service ────────────────────────────
+
 @router.get(
     "/{employee_id}/reservations",
     response_model=List[schemas.Reservation],
@@ -46,6 +49,7 @@ async def get_reservations(employee_id: int, db: Session = Depends(get_db)):
     client = ReservationServiceClient()
     return await client.get_reservations_for_employee(employee_id)
 
+
 @router.post(
     "/",
     response_model=schemas.EmployeeOut,
@@ -55,28 +59,10 @@ async def get_reservations(employee_id: int, db: Session = Depends(get_db)):
 )
 async def create_employee(
     emp_in: schemas.EmployeeCreate,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    """
-    Create a new employee and trigger a welcome email.
-    """
-    emp = crud.create_employee(db, emp_in)
+    return crud.create_employee(db, emp_in)
 
-    # ── call your serverless function to send welcome email ────────────────
-    if emp.idp_id:
-        background_tasks.add_task(
-            send_welcome_email,
-            emp.idp_id,
-            f"{emp.first_name} {emp.last_name}"
-        )
-
-    return emp
-
-async def send_welcome_email(email: str, full_name: str):
-    url = os.getenv("SEND_WELCOME_URL")
-    async with httpx.AsyncClient() as client:
-        await client.post(url, json={"email": email, "name": full_name})
 
 @router.put(
     "/{employee_id}",
@@ -90,6 +76,7 @@ def update_employee(employee_id: int, emp_up: schemas.EmployeeUpdate, db: Sessio
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
     return emp
 
+
 @router.delete(
     "/{employee_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -101,23 +88,50 @@ def delete_employee(employee_id: int, db: Session = Depends(get_db)):
     if not emp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
 
+
 @router.post(
     "/{employee_id}/picture",
     response_model=schemas.EmployeeOut,
-    summary="Upload/update employee picture",
+    summary="Upload/update employee picture and asynchronously generate thumbnail",
     responses={404: {"description": "Not found"}, 401: {"description": "Unauthorized"}},
 )
 async def upload_picture(
     employee_id: int,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
+    """
+    Upload a profile picture to MinIO, save its URL on the employee,
+    and then call the thumbnail‐generator function in the background.
+    """
     emp = crud.get_employee(db, employee_id)
     if not emp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
+
+    # upload original
     from app.services.s3_client import S3ClientService
-    url = await S3ClientService().upload_picture(file, employee_id)
+    data = await file.read()
+    url = await S3ClientService().upload_picture_bytes(data, file.content_type, employee_id)
+
     emp.id_picture = url
     db.commit()
     db.refresh(emp)
+
+    # trigger thumbnail generator
+    thumb_fn = os.getenv("THUMBNAIL_FUNCTION_URL")
+    if thumb_fn:
+        background_tasks.add_task(_call_thumbnail_service, data, employee_id)
+
     return emp
+
+
+async def _call_thumbnail_service(data: bytes, employee_id: int):
+    """
+    POST raw bytes to our thumbnail-function endpoint.
+    """
+    endpoint = os.getenv("THUMBNAIL_FUNCTION_URL").rstrip("/") + "/thumbnail"
+    files = {"file": ("image", data, "application/octet-stream")}
+    params = {"employee_id": employee_id}
+    async with httpx.AsyncClient() as client:
+        await client.post(endpoint, files=files, params=params)
