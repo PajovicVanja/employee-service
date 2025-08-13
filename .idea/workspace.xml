@@ -4,17 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d9d8ba60-633d-460c-9bff-a5153eff5cd6" name="Changes" comment="small fixes">
-      <change beforePath="$PROJECT_DIR$/.idea/employee-service.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/employee-service.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="d9d8ba60-633d-460c-9bff-a5153eff5cd6" name="Changes" comment="removed auth, added routes for employee">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/routers/availability.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routers/availability.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/routers/employees.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routers/employees.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/routers/skills.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routers/skills.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_employees.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_employees.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_graphql.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_graphql.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -122,7 +113,7 @@
       <workItem from="1754550556807" duration="4667000" />
       <workItem from="1754755454496" duration="630000" />
       <workItem from="1754760748969" duration="1309000" />
-      <workItem from="1755108814211" duration="1179000" />
+      <workItem from="1755108814211" duration="2128000" />
     </task>
     <task id="LOCAL-00001" summary="initial">
       <option name="closed" value="true" />
@@ -140,7 +131,15 @@
       <option name="project" value="LOCAL" />
       <updated>1754760775462</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="removed auth, added routes for employee">
+      <option name="closed" value="true" />
+      <created>1755110153183</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1755110153183</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -152,7 +151,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="initial" />
     <MESSAGE value="small fixes" />
-    <option name="LAST_COMMIT_MESSAGE" value="small fixes" />
+    <MESSAGE value="removed auth, added routes for employee" />
+    <option name="LAST_COMMIT_MESSAGE" value="removed auth, added routes for employee" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -166,6 +166,6 @@
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/employee_service$copy.coverage" NAME="copy Coverage Results" MODIFIED="1755109772937" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/employee_service$copy.coverage" NAME="copy Coverage Results" MODIFIED="1755110026185" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
