@@ -1,20 +1,12 @@
 # tests/test_employees.py
 import pytest
 
-# helper to get a valid JWT
-def get_token(client):
-    r = client.post("/token", data={"username":"alice","password":"secret1"})
-    return r.json()["access_token"]
-
 def test_health(client):
     r = client.get("/health")
     assert r.status_code == 200
     assert r.json() == {"status": "ok"}
 
 def test_create_read_update_delete_employee(client):
-    token = get_token(client)
-    headers = {"Authorization": f"Bearer {token}"}
-
     # CREATE
     payload = {
         "first_name": "John",
@@ -22,18 +14,18 @@ def test_create_read_update_delete_employee(client):
         "gender": True,
         "birth_date": "1990-01-01"
     }
-    r = client.post("/employees/", json=payload, headers=headers)
+    r = client.post("/employees/", json=payload)
     assert r.status_code == 201
     emp = r.json()
     assert emp["first_name"] == "John"
     emp_id = emp["id"]
 
     # READ list
-    r = client.get("/employees/", headers=headers)
+    r = client.get("/employees/")
     assert any(e["id"] == emp_id for e in r.json())
 
     # READ detail
-    r = client.get(f"/employees/{emp_id}", headers=headers)
+    r = client.get(f"/employees/{emp_id}")
     assert r.status_code == 200 and r.json()["id"] == emp_id
 
     # UPDATE
@@ -46,16 +38,16 @@ def test_create_read_update_delete_employee(client):
         "id_picture": None,
         "active": True
     }
-    r = client.put(f"/employees/{emp_id}", json=upd, headers=headers)
+    r = client.put(f"/employees/{emp_id}", json=upd)
     assert r.status_code == 200
     assert r.json()["first_name"] == "Jane"
 
-    # DELETE
-    r = client.delete(f"/employees/{emp_id}", headers=headers)
+    # DELETE (soft)
+    r = client.delete(f"/employees/{emp_id}")
     assert r.status_code == 204
 
     # ensure it no longer appears in GET /employees
-    r = client.get("/employees/", headers=headers)
+    r = client.get("/employees/")
     assert all(e["id"] != emp_id for e in r.json())
 
 # stub out the inter‐service call
@@ -67,8 +59,6 @@ def fake_reservation(monkeypatch):
     monkeypatch.setattr(ReservationServiceClient, "get_reservations_for_employee", fake_get)
 
 def test_get_reservations(client):
-    token = get_token(client)
-    headers = {"Authorization": f"Bearer {token}"}
     # create an employee
     payload = {
         "first_name": "Tom",
@@ -76,9 +66,9 @@ def test_get_reservations(client):
         "gender": True,
         "birth_date": "1991-01-01"
     }
-    emp_id = client.post("/employees/", json=payload, headers=headers).json()["id"]
+    emp_id = client.post("/employees/", json=payload).json()["id"]
 
-    r = client.get(f"/employees/{emp_id}/reservations", headers=headers)
+    r = client.get(f"/employees/{emp_id}/reservations")
     assert r.status_code == 200
     data = r.json()
     assert data and data[0]["employee_id"] == emp_id

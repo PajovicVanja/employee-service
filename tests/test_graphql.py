@@ -1,9 +1,7 @@
 # tests/test_graphql.py
 
 def test_graphql_employees_query(client):
-    # create one employee via REST
-    token = client.post("/token", data={"username":"alice","password":"secret1"}).json()["access_token"]
-    headers = {"Authorization": f"Bearer {token}"}
+    # create one employee via REST (no auth now)
     client.post(
         "/employees/",
         json={
@@ -12,7 +10,6 @@ def test_graphql_employees_query(client):
             "gender": True,
             "birth_date": "1990-01-01"
         },
-        headers=headers
     )
 
     query = {

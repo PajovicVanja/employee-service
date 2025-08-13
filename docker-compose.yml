@@ -21,6 +21,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: docker.io/pajovicv/employee-service:latest   # << add this
     container_name: employee-svc
     depends_on:
       - employee-db
@@ -28,7 +29,6 @@ services:
       - .env
     ports:
       - "8000:8000"
-    # mount local storage for originals & thumbnails
     volumes:
       - ./storage:/storage
     networks:

@@ -6,8 +6,6 @@ python-multipart
 python-dotenv
 minio
 pymysql
-PyJWT
-cryptography
 httpx
 strawberry-graphql
 pytest

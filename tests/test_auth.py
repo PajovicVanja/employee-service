@@ -1,10 +1,3 @@
-# tests/test_auth.py
-def test_token_success(client):
-    r = client.post("/token", data={"username": "alice", "password": "secret1"})
-    assert r.status_code == 200
-    body = r.json()
-    assert "access_token" in body and body["token_type"] == "bearer"
-
-def test_token_failure(client):
-    r = client.post("/token", data={"username": "alice", "password": "wrong"})
-    assert r.status_code == 401
+# Auth is handled by the API Gateway; this service no longer exposes /token.
+import pytest
+pytest.skip("Auth endpoints removed from employee-service; covered at API Gateway.", allow_module_level=True)

@@ -2,7 +2,7 @@ import os
 import time
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import OperationalError
@@ -11,21 +11,19 @@ from sqlalchemy.exc import OperationalError
 load_dotenv()
 
 from app.database import engine, Base
-from app.auth import verify_jwt_token
 import app.models  # noqa: ensure models are registered
 
 # routers
-from app.routers import auth, employees, availability, skills
+from app.routers import employees, availability, skills
 
 # graphql
-import strawberry
 from strawberry.asgi import GraphQL
 from app.graphql.schema import schema
 
 app = FastAPI(
     title="Employee Service",
-    description="Manages employees, availability slots and skills. All endpoints are JWT‐protected.",
-    version="1.0.0",
+    description="Manages employees, availability slots and skills. Auth is handled upstream by the API Gateway.",
+    version="1.1.0",
 )
 
 # CORS
@@ -36,7 +34,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ─── static files mount ────────────────────────────────────────────────────────
 # serve everything under STORAGE_PATH as /files
 app.mount(
     "/files",
@@ -59,29 +56,23 @@ def on_startup():
 def health():
     return {"status": "ok"}
 
-# auth (unprotected)
-app.include_router(auth.router, tags=["auth"])
-
-# GraphQL
+# GraphQL (no auth here; API Gateway should guard it if needed)
 graphql_app = GraphQL(schema)
 app.mount("/graphql", graphql_app, name="graphql")
 
-# REST (JWT‐protected)
+# REST (no in-service auth; API Gateway in front)
 app.include_router(
     employees.router,
     prefix="/employees",
     tags=["employees"],
-    dependencies=[Depends(verify_jwt_token)],
 )
 app.include_router(
     availability.router,
     prefix="/employees/{employee_id}/availability",
     tags=["availability"],
-    dependencies=[Depends(verify_jwt_token)],
 )
 app.include_router(
     skills.router,
     prefix="/employees/{employee_id}/skills",
     tags=["skills"],
-    dependencies=[Depends(verify_jwt_token)],
 )

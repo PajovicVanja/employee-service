@@ -7,10 +7,17 @@ def get_employee(db: Session, employee_id: int):
     return db.query(models.Employee).filter(models.Employee.id == employee_id).first()
 
 def get_employees(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Employee).filter(models.Employee.active==True).offset(skip).limit(limit).all()
+    return (
+        db.query(models.Employee)
+        .filter(models.Employee.active == True)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 def create_employee(db: Session, emp: schemas.EmployeeCreate):
-    db_emp = models.Employee(**emp.dict())
+    # pydantic v2: model_dump()
+    db_emp = models.Employee(**emp.model_dump())
     db.add(db_emp)
     db.commit()
     db.refresh(db_emp)
@@ -20,7 +27,7 @@ def update_employee(db: Session, employee_id: int, emp: schemas.EmployeeUpdate):
     db_emp = get_employee(db, employee_id)
     if not db_emp:
         return None
-    for field, value in emp.dict().items():
+    for field, value in emp.model_dump().items():
         setattr(db_emp, field, value)
     db.commit()
     db.refresh(db_emp)
@@ -40,7 +47,7 @@ def get_availability(db: Session, employee_id: int):
 def create_availability(db: Session, employee_id: int, slots: List[schemas.AvailabilitySlotCreate]):
     objs = []
     for slot in slots:
-        obj = models.AvailabilitySlot(employee_id=employee_id, **slot.dict())
+        obj = models.AvailabilitySlot(employee_id=employee_id, **slot.model_dump())
         db.add(obj)
         objs.append(obj)
     db.commit()
