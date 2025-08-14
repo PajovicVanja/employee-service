@@ -1,10 +1,12 @@
 import os
 import time
+from typing import Tuple
 from dotenv import load_dotenv
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from sqlalchemy.exc import OperationalError
 
 # load .env
@@ -15,15 +17,37 @@ import app.models  # noqa: ensure models are registered
 
 # routers
 from app.routers import employees, availability, skills
+from app.schemas import Problem
 
-# graphql
-from strawberry.asgi import GraphQL
-from app.graphql.schema import schema
+OPENAPI_TAGS = [
+    {
+        "name": "employees",
+        "description": "Employee CRUD and media upload."
+    },
+    {
+        "name": "availability",
+        "description": "Per-employee weekly availability slots."
+    },
+    {
+        "name": "skills",
+        "description": "Per-employee service skills."
+    },
+    {
+        "name": "health",
+        "description": "Service health & readiness."
+    },
+]
 
 app = FastAPI(
     title="Employee Service",
-    description="Manages employees, availability slots and skills. Auth is handled upstream by the API Gateway.",
-    version="1.1.0",
+    description=(
+        "Manages employees, availability slots and skills.\n\n"
+        "Authentication & authorization are handled by the API Gateway. "
+        "This service exposes OpenAPI documentation with request/response examples, "
+        "status codes, and error schemas."
+    ),
+    version="1.2.0",
+    openapi_tags=OPENAPI_TAGS,
 )
 
 # CORS
@@ -52,15 +76,39 @@ def on_startup():
             time.sleep(2)
     Base.metadata.create_all(bind=engine)
 
-@app.get("/health", tags=["health"], summary="Health check")
+@app.get("/health", tags=["health"], summary="Health check", responses={
+    200: {
+        "description": "Service is healthy",
+        "content": {"application/json": {"example": {"status": "ok"}}}
+    }
+})
 def health():
     return {"status": "ok"}
 
-# GraphQL (no auth here; API Gateway should guard it if needed)
-graphql_app = GraphQL(schema)
-app.mount("/graphql", graphql_app, name="graphql")
+# ───────────────────── Global exception mappers ─────────────────────
 
-# REST (no in-service auth; API Gateway in front)
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    problem = Problem(
+        title="Internal Server Error",
+        status=500,
+        detail=str(exc) if os.getenv("ENV", "dev") == "dev" else "Unexpected error",
+        instance=request.url.path
+    )
+    return JSONResponse(status_code=500, content=problem.model_dump())
+
+from fastapi import HTTPException
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    problem = Problem(
+        title=exc.detail if isinstance(exc.detail, str) else "HTTP Error",
+        status=exc.status_code,
+        instance=request.url.path
+    )
+    return JSONResponse(status_code=exc.status_code, content=problem.model_dump())
+
+# ─────────────────────────── REST routers ───────────────────────────
+
 app.include_router(
     employees.router,
     prefix="/employees",
