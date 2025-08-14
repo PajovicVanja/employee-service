@@ -1,4 +1,6 @@
 # tests/test_employees.py
+import io
+from PIL import Image
 import pytest
 
 def test_health(client):
@@ -22,6 +24,7 @@ def test_create_read_update_delete_employee(client):
 
     # READ list
     r = client.get("/employees/")
+    assert r.status_code == 200
     assert any(e["id"] == emp_id for e in r.json())
 
     # READ detail
@@ -48,13 +51,14 @@ def test_create_read_update_delete_employee(client):
 
     # ensure it no longer appears in GET /employees
     r = client.get("/employees/")
+    assert r.status_code == 200
     assert all(e["id"] != emp_id for e in r.json())
 
-# stub out the inter‐service call
+# stub out the inter-service call
 @pytest.fixture(autouse=True)
 def fake_reservation(monkeypatch):
     async def fake_get(self, employee_id):
-        return [{"id":1,"employee_id":employee_id,"date":"2025-01-01","time_from":"09:00:00","time_to":"10:00:00"}]
+        return [{"id": 1, "employee_id": employee_id, "date": "2025-01-01", "time_from": "09:00:00", "time_to": "10:00:00"}]
     from app.services.interop_client import ReservationServiceClient
     monkeypatch.setattr(ReservationServiceClient, "get_reservations_for_employee", fake_get)
 
@@ -72,3 +76,27 @@ def test_get_reservations(client):
     assert r.status_code == 200
     data = r.json()
     assert data and data[0]["employee_id"] == emp_id
+
+def test_upload_picture(client):
+    # create an employee
+    payload = {
+        "first_name": "Alice",
+        "last_name": "Lens",
+        "gender": True,
+        "birth_date": "1993-03-03"
+    }
+    emp_id = client.post("/employees/", json=payload).json()["id"]
+
+    # build a tiny in-memory JPEG
+    img = Image.new("RGB", (10, 10), (128, 64, 64))
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG")
+    buf.seek(0)
+
+    files = {"file": ("pic.jpg", buf.read(), "image/jpeg")}
+    r = client.post(f"/employees/{emp_id}/picture", files=files)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["id"] == emp_id
+    assert isinstance(data.get("id_picture"), str)
+    assert data["id_picture"].startswith("/files/thumbnails/")

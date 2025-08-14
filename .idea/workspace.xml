@@ -4,17 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d9d8ba60-633d-460c-9bff-a5153eff5cd6" name="Changes" comment="removed auth, added routes for employee">
+    <list default="true" id="d9d8ba60-633d-460c-9bff-a5153eff5cd6" name="Changes" comment="Documentation added">
+      <change beforePath="$PROJECT_DIR$/.idea/employee-service.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/employee-service.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/graphql/schema.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/routers/availability.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routers/availability.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/routers/employees.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routers/employees.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/routers/skills.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/routers/skills.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/schemas.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/interop_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/interop_client.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_graphql.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/conftest.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/conftest.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -72,7 +66,7 @@
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
-  <component name="RunManager" selected="Python.main">
+  <component name="RunManager" selected="Python.copy">
     <configuration name="copy" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="employee-service" />
       <option name="ENV_FILES" value="" />
@@ -123,8 +117,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.main" />
         <item itemvalue="Python.copy" />
+        <item itemvalue="Python.main" />
       </list>
     </recent_temporary>
   </component>
@@ -174,7 +168,15 @@
       <option name="project" value="LOCAL" />
       <updated>1755110153183</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Documentation added">
+      <option name="closed" value="true" />
+      <created>1755175563227</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1755175563227</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -187,7 +189,8 @@
     <MESSAGE value="initial" />
     <MESSAGE value="small fixes" />
     <MESSAGE value="removed auth, added routes for employee" />
-    <option name="LAST_COMMIT_MESSAGE" value="removed auth, added routes for employee" />
+    <MESSAGE value="Documentation added" />
+    <option name="LAST_COMMIT_MESSAGE" value="Documentation added" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -201,7 +204,7 @@
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/employee_service$copy.coverage" NAME="copy Coverage Results" MODIFIED="1755171335739" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/employee_service$main.coverage" NAME="main Coverage Results" MODIFIED="1755175424055" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app" />
+    <SUITE FILE_PATH="coverage/employee_service$copy.coverage" NAME="copy Coverage Results" MODIFIED="1755176375250" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/employee_service$main.coverage" NAME="main Coverage Results" MODIFIED="1755176183533" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app" />
   </component>
 </project>

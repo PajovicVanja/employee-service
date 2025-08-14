@@ -13,6 +13,7 @@ from sqlalchemy.exc import OperationalError
 load_dotenv()
 
 from app.database import engine, Base
+from contextlib import asynccontextmanager
 import app.models  # noqa: ensure models are registered
 
 # routers
@@ -65,9 +66,9 @@ app.mount(
     name="files",
 )
 
-@app.on_event("startup")
-def on_startup():
-    # wait for DB
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
     for _ in range(10):
         try:
             with engine.connect():
@@ -75,6 +76,8 @@ def on_startup():
         except OperationalError:
             time.sleep(2)
     Base.metadata.create_all(bind=engine)
+
+    yield  # Application runs here
 
 @app.get("/health", tags=["health"], summary="Health check", responses={
     200: {
