@@ -116,7 +116,7 @@ class EmployeeBase(BaseModel):
             "last_name": "Doe",
             "gender": True,
             "birth_date": "1990-01-01",
-            "id_picture": "/files/thumbnails/1.jpg",
+            "id_picture": "/files/originals/1.jpg",
             "company_id": 1,
             "location_id": 12
         }
@@ -160,7 +160,7 @@ class EmployeeOut(EmployeeBase):
             "last_name": "Doe",
             "gender": True,
             "birth_date": "1990-01-01",
-            "id_picture": "/files/thumbnails/1.jpg",
+            "id_picture": "/files/originals/1.jpg",
             "active": True,
             "company_id": 1,
             "location_id": 12,

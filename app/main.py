@@ -21,7 +21,7 @@ from app.routers import employees, availability, skills
 from app.schemas import Problem
 
 OPENAPI_TAGS = [
-    {"name": "employees", "description": "Employee CRUD and media upload."},
+    {"name": "employees", "description": "Employee CRUD."},
     {"name": "availability", "description": "Per-employee weekly availability slots."},
     {"name": "skills", "description": "Per-employee service skills."},
     {"name": "health", "description": "Service health & readiness."},
@@ -34,7 +34,7 @@ app = FastAPI(
         "Authentication & authorization are handled by the API Gateway. "
         "This service validates optional company/location/service data via Company Service when configured."
     ),
-    version="1.3.0",
+    version="1.4.0",
     openapi_tags=OPENAPI_TAGS,
 )
 
@@ -46,7 +46,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# serve everything under STORAGE_PATH as /files
+# serve everything under STORAGE_PATH as /files (kept; independent of thumbnail logic)
 app.mount(
     "/files",
     StaticFiles(directory=os.getenv("STORAGE_PATH", "storage")),

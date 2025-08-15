@@ -1,11 +1,10 @@
 # app/routers/employees.py
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, status, Path, Query, Body
+from fastapi import APIRouter, HTTPException, Depends, status, Path, Query, Body
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from app import crud, schemas
 from app.dependencies import get_db
-from app.services.storage import LocalStorage
 from app.services.interop_client import ReservationServiceClient
 from app.services.company_client import CompanyServiceClient
 
@@ -17,13 +16,33 @@ def _validate_company_and_location(payload: schemas.EmployeeBase, client: Compan
     # company -> must exist if provided
     if payload.company_id is not None and not client.validate_company(payload.company_id):
         raise HTTPException(status_code=400, detail=f"company_id {payload.company_id} not found")
-
     # location -> must exist if provided
     if payload.location_id is not None and not client.validate_location(payload.location_id):
         raise HTTPException(status_code=400, detail=f"location_id {payload.location_id} not found")
 
 # ─── CRUD: Employees ───────────────────────────────────────────────────────────
-
+@router.post(
+    "/",
+    response_model=schemas.EmployeeOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create employee",
+    responses={
+        201: {"description": "Employee created"},
+        400: {"model": schemas.Problem, "description": "Validation error"},
+        500: {"model": schemas.Problem, "description": "Server error"},
+    },
+)
+def create_employee(
+    payload: schemas.EmployeeCreate = Body(..., description="New employee payload"),
+    db: Session = Depends(get_db),
+):
+    """
+    Create a new employee. If COMPANY_SERVICE_URL is configured, company_id and
+    location_id (when provided) are validated against Company Service.
+    """
+    _validate_company_and_location(payload, CompanyServiceClient())
+    emp = crud.create_employee(db, payload)
+    return emp
 @router.get(
     "/",
     response_model=List[schemas.EmployeeOut],
@@ -197,35 +216,3 @@ def employee_context(
         location=location,
         businessHours=business_hours,
     )
-
-# ─── File: picture upload (thumbnail generated) ────────────────────────────────
-
-@router.post(
-    "/{employee_id}/picture",
-    response_model=schemas.EmployeeOut,
-    summary="Upload/update employee picture & generate thumbnail",
-    responses={
-        200: {"description": "Thumbnail generated and employee updated"},
-        400: {"model": schemas.Problem, "description": "Invalid image"},
-        404: {"model": schemas.Problem, "description": "Employee not found"},
-        500: {"model": schemas.Problem, "description": "Server error"},
-    },
-)
-async def upload_picture(
-    employee_id: int,
-    file: UploadFile = File(..., description="Image file (png or jpeg recommended)"),
-    db: Session = Depends(get_db),
-):
-    emp = crud.get_employee(db, employee_id)
-    if not emp:
-        raise HTTPException(status_code=404, detail="Employee not found")
-
-    try:
-        url = await LocalStorage.save_and_thumbnail(file, employee_id)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error processing image: {e}")
-
-    emp.id_picture = url
-    db.commit()
-    db.refresh(emp)
-    return emp

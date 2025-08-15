@@ -5,6 +5,7 @@ from typing import List, Set
 from app import crud, schemas
 from app.dependencies import get_db
 from app.services.company_client import CompanyServiceClient
+from app.services.faas_client import FaaSClient
 
 router = APIRouter()
 
@@ -54,13 +55,6 @@ def add_availability(
     ),
     db: Session = Depends(get_db),
 ):
-    """
-    Example request:
-    [
-      {"day_of_week": 1, "time_from": "09:00:00", "time_to": "12:00:00", "location_id": 3},
-      {"day_of_week": 3, "time_from": "13:00:00", "time_to": "17:00:00", "location_id": 3}
-    ]
-    """
     if not crud.get_employee(db, employee_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
 
@@ -72,7 +66,33 @@ def add_availability(
             if not c.validate_location(lid):
                 raise HTTPException(status_code=400, detail=f"location_id {lid} not found")
 
-    return crud.create_availability(db, employee_id, slots)
+    # Optional: pre-validate with FAAS (overlaps + business-hours bounds)
+    faas = FaaSClient()
+    if faas.enabled():
+        emp = crud.get_employee(db, employee_id)
+        bh = None
+        if c.enabled() and emp and emp.company_id:
+            # Company service BH keys may be timeFrom/timeTo; client adapts either.
+            bh = c.get_business_hours_by_company(emp.company_id)
+
+        check = faas.availability_check(
+            slots=[s.model_dump() for s in slots],
+            business_hours=bh
+        )
+        if not check.get("ok", True):
+            overlaps = check.get("overlaps", [])
+            oob = check.get("outOfBounds", [])
+            raise HTTPException(
+                status_code=400,
+                detail=f"availability validation failed: overlaps={len(overlaps)}, outOfBounds={len(oob)}"
+            )
+
+    created = crud.create_availability(db, employee_id, slots)
+
+    # Best-effort audit
+    faas.audit("availability.created", entity_id=employee_id, meta={"count": len(created)})
+
+    return created
 
 @router.delete(
     "/{slot_id}",
@@ -94,3 +114,5 @@ def remove_availability(
     slot = crud.delete_availability_slot(db, slot_id)
     if not slot:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Slot not found")
+
+    FaaSClient().audit("availability.deleted", entity_id=employee_id, meta={"slot_id": slot_id})

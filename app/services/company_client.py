@@ -12,13 +12,23 @@ def _get_bool(env: str, default: bool) -> bool:
 class CompanyServiceClient:
     """
     Minimal client for Company Service for read-only lookups & validation.
-    Graceful if COMPANY_SERVICE_URL is absent (validation skipped).
+
+    ⚠️ Validation is now **opt-in** via COMPANY_VALIDATION_ENABLED=true.
+       This prevents test runs (which load .env) from failing when the
+       Company service isn't available.
     """
     def __init__(self):
         self.base_url = os.getenv("COMPANY_SERVICE_URL", "").rstrip("/")
+
+        # New: explicit switch to enable validation (default OFF).
+        self._enabled = _get_bool("COMPANY_VALIDATION_ENABLED", False) and bool(self.base_url)
+
+        # Keep strict behavior only for when enabled.
         self.strict = _get_bool("COMPANY_VALIDATION_STRICT", False)
-        if not self.base_url:
-            self._enabled = False
+
+        if not self._enabled:
+            # Do not create an HTTP client when disabled.
+            self._client = None
             return
 
         connect_timeout = float(os.getenv("COMPANY_HTTP_CONNECT_TIMEOUT", "2.0"))
@@ -32,7 +42,6 @@ class CompanyServiceClient:
                 pool=connect_timeout,
             ),
         )
-        self._enabled = True
 
     def enabled(self) -> bool:
         return self._enabled
@@ -82,7 +91,6 @@ class CompanyServiceClient:
     def get_business_hours_by_company(self, company_id: int) -> List[Dict[str, Any]]:
         if not self._enabled:
             return []
-        # If you exposed /business-hours/company/{companyId} in Company svc, use it
         try:
             r = self._client.get(f"/business-hours/company/{company_id}")
             if r.status_code == 404:
