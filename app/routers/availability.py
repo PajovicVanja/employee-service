@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Path, Body
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Set
 
 from app import crud, schemas
 from app.dependencies import get_db
+from app.services.company_client import CompanyServiceClient
 
 router = APIRouter()
 
@@ -18,7 +19,8 @@ router = APIRouter()
     },
 )
 def list_availability(
-    employee_id: int, db: Session = Depends(get_db)
+    employee_id: int = Path(..., description="Employee ID"),
+    db: Session = Depends(get_db)
 ):
     if not crud.get_employee(db, employee_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
@@ -36,12 +38,24 @@ def list_availability(
     },
 )
 def add_availability(
-    employee_id: int,
-    slots: List[schemas.AvailabilitySlotCreate],
+    employee_id: int = Path(..., description="Employee ID"),
+    slots: List[schemas.AvailabilitySlotCreate] = Body(
+        ...,
+        description="One or more weekly availability slots",
+        examples={
+            "twoSlots": {
+                "summary": "Two slots in one request",
+                "value": [
+                    {"day_of_week": 1, "time_from": "09:00:00", "time_to": "12:00:00", "location_id": 3},
+                    {"day_of_week": 3, "time_from": "13:00:00", "time_to": "17:00:00", "location_id": 3}
+                ],
+            }
+        },
+    ),
     db: Session = Depends(get_db),
 ):
     """
-    Example request
+    Example request:
     [
       {"day_of_week": 1, "time_from": "09:00:00", "time_to": "12:00:00", "location_id": 3},
       {"day_of_week": 3, "time_from": "13:00:00", "time_to": "17:00:00", "location_id": 3}
@@ -49,6 +63,15 @@ def add_availability(
     """
     if not crud.get_employee(db, employee_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
+
+    # Validate locations if Company service is configured
+    c = CompanyServiceClient()
+    if c.enabled():
+        loc_ids: Set[int] = {int(s.location_id) for s in slots if s.location_id is not None}
+        for lid in loc_ids:
+            if not c.validate_location(lid):
+                raise HTTPException(status_code=400, detail=f"location_id {lid} not found")
+
     return crud.create_availability(db, employee_id, slots)
 
 @router.delete(
@@ -62,7 +85,9 @@ def add_availability(
     },
 )
 def remove_availability(
-    employee_id: int, slot_id: int, db: Session = Depends(get_db)
+    employee_id: int = Path(..., description="Employee ID"),
+    slot_id: int = Path(..., description="Availability slot ID"),
+    db: Session = Depends(get_db),
 ):
     if not crud.get_employee(db, employee_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")

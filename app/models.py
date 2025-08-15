@@ -1,5 +1,4 @@
 # app/models.py
-
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Time, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -15,6 +14,10 @@ class Employee(Base):
     birth_date = Column(DateTime, nullable=False)
     id_picture = Column(String(255), nullable=True)
     active = Column(Boolean, default=True, nullable=False)
+
+    # ─── Integration fields ──────────────────────────────────────────────────
+    company_id = Column(Integer, nullable=True)      # FK to Company (remote)
+    location_id = Column(Integer, nullable=True)     # home branch (remote)
 
     availability = relationship(
         "AvailabilitySlot",
@@ -35,7 +38,7 @@ class AvailabilitySlot(Base):
     day_of_week = Column(Integer, nullable=False)
     time_from = Column(Time, nullable=False)
     time_to = Column(Time, nullable=False)
-    location_id = Column(Integer, nullable=True)
+    location_id = Column(Integer, nullable=True)  # Location from Company svc
 
     employee = relationship("Employee", back_populates="availability")
 
@@ -43,6 +46,6 @@ class EmployeeSkill(Base):
     __tablename__ = "employee_skills"
 
     employee_id = Column(Integer, ForeignKey("employee.id"), primary_key=True)
-    service_id = Column(Integer, primary_key=True)
+    service_id = Column(Integer, primary_key=True)  # ServiceM.id from Company svc
 
     employee = relationship("Employee", back_populates="skills")

@@ -1,10 +1,11 @@
 version: '3.8'
 
 services:
-  # ─── MySQL database ───────────────────────────────────────────
   employee-db:
     image: mysql:8.0
     container_name: employee-db
+    ports:
+      - "3307:3306"
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
@@ -16,12 +17,11 @@ services:
     networks:
       - soa-net
 
-  # ─── Your FastAPI app ─────────────────────────────────────────
   employee-svc:
     build:
       context: .
       dockerfile: Dockerfile
-    image: docker.io/pajovicv/employee-service:latest   # << add this
+    image: docker.io/pajovicv/employee-service:latest
     container_name: employee-svc
     depends_on:
       - employee-db
@@ -39,4 +39,5 @@ volumes:
 
 networks:
   soa-net:
-    driver: bridge
+    external: true
+    name: soa-net

@@ -21,22 +21,10 @@ from app.routers import employees, availability, skills
 from app.schemas import Problem
 
 OPENAPI_TAGS = [
-    {
-        "name": "employees",
-        "description": "Employee CRUD and media upload."
-    },
-    {
-        "name": "availability",
-        "description": "Per-employee weekly availability slots."
-    },
-    {
-        "name": "skills",
-        "description": "Per-employee service skills."
-    },
-    {
-        "name": "health",
-        "description": "Service health & readiness."
-    },
+    {"name": "employees", "description": "Employee CRUD and media upload."},
+    {"name": "availability", "description": "Per-employee weekly availability slots."},
+    {"name": "skills", "description": "Per-employee service skills."},
+    {"name": "health", "description": "Service health & readiness."},
 ]
 
 app = FastAPI(
@@ -44,10 +32,9 @@ app = FastAPI(
     description=(
         "Manages employees, availability slots and skills.\n\n"
         "Authentication & authorization are handled by the API Gateway. "
-        "This service exposes OpenAPI documentation with request/response examples, "
-        "status codes, and error schemas."
+        "This service validates optional company/location/service data via Company Service when configured."
     ),
-    version="1.2.0",
+    version="1.3.0",
     openapi_tags=OPENAPI_TAGS,
 )
 
@@ -76,7 +63,6 @@ async def lifespan(app: FastAPI):
         except OperationalError:
             time.sleep(2)
     Base.metadata.create_all(bind=engine)
-
     yield  # Application runs here
 
 @app.get("/health", tags=["health"], summary="Health check", responses={
@@ -112,18 +98,6 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 # ─────────────────────────── REST routers ───────────────────────────
 
-app.include_router(
-    employees.router,
-    prefix="/employees",
-    tags=["employees"],
-)
-app.include_router(
-    availability.router,
-    prefix="/employees/{employee_id}/availability",
-    tags=["availability"],
-)
-app.include_router(
-    skills.router,
-    prefix="/employees/{employee_id}/skills",
-    tags=["skills"],
-)
+app.include_router(employees.router, prefix="/employees", tags=["employees"])
+app.include_router(availability.router, prefix="/employees/{employee_id}/availability", tags=["availability"])
+app.include_router(skills.router, prefix="/employees/{employee_id}/skills", tags=["skills"])
