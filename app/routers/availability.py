@@ -1,13 +1,85 @@
+from datetime import time as dtime
 from fastapi import APIRouter, Depends, HTTPException, status, Path, Body
 from sqlalchemy.orm import Session
 from typing import List, Set
 
-from app import crud, schemas
+from app import crud, schemas, models
 from app.dependencies import get_db
 from app.services.company_client import CompanyServiceClient
 from app.services.faas_client import FaaSClient
 
 router = APIRouter()
+
+
+def _overlaps(a_from: dtime, a_to: dtime, b_from: dtime, b_to: dtime) -> bool:
+    """
+    Returns True iff [a_from, a_to) overlaps [b_from, b_to).
+    Touching at the boundary (e.g. 12:00-13:00 and 13:00-14:00) is allowed.
+    """
+    return a_from < b_to and a_to > b_from
+
+
+def _validate_no_overlaps(db: Session, employee_id: int, slots: List[schemas.AvailabilitySlotCreate]) -> None:
+    """
+    Raises HTTPException(400) if any incoming slot:
+      - has invalid time range (time_from >= time_to), or
+      - overlaps with another incoming slot on the same day, or
+      - overlaps with an already saved slot for this employee on the same day.
+    """
+    if not slots:
+        return
+
+    # Basic per-slot sanity
+    for s in slots:
+        if s.time_from >= s.time_to:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid time range: {s.time_from} .. {s.time_to} (time_from must be < time_to)"
+            )
+
+    # Load existing only for the days we are touching
+    days_touched: Set[int] = {int(s.day_of_week) for s in slots}
+    existing: List[models.AvailabilitySlot] = (
+        db.query(models.AvailabilitySlot)
+        .filter(
+            models.AvailabilitySlot.employee_id == employee_id,
+            models.AvailabilitySlot.day_of_week.in_(days_touched),
+        )
+        .all()
+    )
+
+    # Check incoming vs existing
+    existing_by_day = {}
+    for e in existing:
+        existing_by_day.setdefault(int(e.day_of_week), []).append(e)
+
+    for s in slots:
+        for e in existing_by_day.get(int(s.day_of_week), []):
+            if _overlaps(s.time_from, s.time_to, e.time_from, e.time_to):
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Overlapping with existing slot: "
+                        f"day={s.day_of_week} new={s.time_from}-{s.time_to} "
+                        f"existing(id={e.id})={e.time_from}-{e.time_to}"
+                    ),
+                )
+
+    # Check incoming vs incoming (within the same request)
+    seen_by_day = {}
+    for s in slots:
+        day = int(s.day_of_week)
+        for prev in seen_by_day.get(day, []):
+            if _overlaps(s.time_from, s.time_to, prev.time_from, prev.time_to):
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Overlapping slots in request payload: "
+                        f"day={day} {prev.time_from}-{prev.time_to} vs {s.time_from}-{s.time_to}"
+                    ),
+                )
+        seen_by_day.setdefault(day, []).append(s)
+
 
 @router.get(
     "/",
@@ -26,6 +98,7 @@ def list_availability(
     if not crud.get_employee(db, employee_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
     return crud.get_availability(db, employee_id)
+
 
 @router.post(
     "/",
@@ -58,6 +131,9 @@ def add_availability(
     if not crud.get_employee(db, employee_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
 
+    # Always enforce no-overlap server-side (independent of FAAS).
+    _validate_no_overlaps(db, employee_id, slots)
+
     # Validate locations if Company service is configured
     c = CompanyServiceClient()
     if c.enabled():
@@ -67,6 +143,8 @@ def add_availability(
                 raise HTTPException(status_code=400, detail=f"location_id {lid} not found")
 
     # Optional: pre-validate with FAAS (overlaps + business-hours bounds)
+    # (We still keep FAAS for out-of-business-hours detection etc.,
+    # but overlap is now already enforced locally.)
     faas = FaaSClient()
     if faas.enabled():
         emp = crud.get_employee(db, employee_id)
@@ -93,6 +171,7 @@ def add_availability(
     faas.audit("availability.created", entity_id=employee_id, meta={"count": len(created)})
 
     return created
+
 
 @router.delete(
     "/{slot_id}",

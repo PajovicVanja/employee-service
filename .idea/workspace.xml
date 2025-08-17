@@ -4,9 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d9d8ba60-633d-460c-9bff-a5153eff5cd6" name="Changes" comment="integration with faas">
+    <list default="true" id="d9d8ba60-633d-460c-9bff-a5153eff5cd6" name="Changes" comment="docker compose change">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/interop_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/interop_client.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -146,6 +146,10 @@
       <workItem from="1755365321655" duration="93000" />
       <workItem from="1755367305059" duration="1032000" />
       <workItem from="1755384055429" duration="460000" />
+      <workItem from="1755384862366" duration="270000" />
+      <workItem from="1755385673664" duration="3000" />
+      <workItem from="1755420916377" duration="7000" />
+      <workItem from="1755421267646" duration="588000" />
     </task>
     <task id="LOCAL-00001" summary="initial">
       <option name="closed" value="true" />
@@ -195,7 +199,15 @@
       <option name="project" value="LOCAL" />
       <updated>1755285729100</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="docker compose change">
+      <option name="closed" value="true" />
+      <created>1755385131875</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1755385131875</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -211,7 +223,8 @@
     <MESSAGE value="Documentation added" />
     <MESSAGE value="integration with companyreservation service" />
     <MESSAGE value="integration with faas" />
-    <option name="LAST_COMMIT_MESSAGE" value="integration with faas" />
+    <MESSAGE value="docker compose change" />
+    <option name="LAST_COMMIT_MESSAGE" value="docker compose change" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

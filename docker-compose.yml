@@ -35,6 +35,7 @@ services:
       COMPANY_HTTP_READ_TIMEOUT: ${COMPANY_HTTP_READ_TIMEOUT:-2.0}
       COMPANY_VALIDATION_STRICT: ${COMPANY_VALIDATION_STRICT:-false}
       COMPANY_VALIDATION_ENABLED: ${COMPANY_VALIDATION_ENABLED:-true}
+      # Note: default includes /api; the client also handles when it's missing
       FAAS_BASE_URL: ${FAAS_BASE_URL:-https://employee-utils-faas.onrender.com}
       FAAS_ENABLED: ${FAAS_ENABLED:-true}
       FAAS_CONNECT_TIMEOUT: ${FAAS_CONNECT_TIMEOUT:-2.0}

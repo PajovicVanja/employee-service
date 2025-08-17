@@ -17,14 +17,21 @@ def _to_hms(v: Union[str, dtime]) -> str:
 
 class FaaSClient:
     """
-    Thin client for the employee-company FAAS (Vercel).
-    All methods are no-ops when disabled so the service remains self-contained.
+    Thin client for the employee FAAS utility.
+
+    - All calls are no-ops when disabled (so service remains self-contained).
+    - Fail-open on validation (if FAAS is unreachable, we don't block writes).
+    - Accepts FAAS_BASE_URL with or without `/api` and adds it if needed.
     """
     def __init__(self):
-        self.base_url = (os.getenv("FAAS_BASE_URL", "") or "").rstrip("/")
+        base = (os.getenv("FAAS_BASE_URL", "") or "").rstrip("/")
+        self.base_url = base
         self._enabled = _get_bool("FAAS_ENABLED", False) and bool(self.base_url)
         self._audit_enabled = _get_bool("FAAS_AUDIT_ENABLED", False)
         self.service_name = os.getenv("FAAS_AUDIT_SERVICE", "employee-service")
+
+        # Whether we should prefix paths with /api
+        self._needs_api_prefix = not self.base_url.endswith("/api")
 
         if not self._enabled:
             self._client = None
@@ -40,6 +47,11 @@ class FaaSClient:
             ),
         )
 
+    # remove the auto '/api' logic completely
+    def _path(self, suffix: str) -> str:
+        # trust FAAS_BASE_URL exactly
+        return suffix if suffix.startswith("/") else f"/{suffix}"
+
     def enabled(self) -> bool:
         return self._enabled
 
@@ -51,7 +63,7 @@ class FaaSClient:
     ) -> Dict[str, Any]:
         """
         slots: [{day_of_week, time_from, time_to, location_id?}] times as str or datetime.time
-        business_hours: [{dayNumber, fromTime, toTime, ...}] (optional)
+        business_hours: [{dayNumber, fromTime/timeFrom, toTime/timeTo, ...}] (optional)
         """
         if not self._enabled:
             return {"ok": True, "overlaps": [], "outOfBounds": []}
@@ -79,13 +91,13 @@ class FaaSClient:
                 })
 
         try:
-            r = self._client.post("/availability-check", json={
+            r = self._client.post(self._path("/availability-check"), json={
                 "slots": payload_slots,
                 "businessHours": bh
             })
             r.raise_for_status()
             return r.json()
-        except Exception as _:
+        except Exception:
             # Fail-open: don't block writes if FAAS is down.
             return {"ok": True, "overlaps": [], "outOfBounds": []}
 
@@ -99,7 +111,7 @@ class FaaSClient:
         if not (self._enabled and self._audit_enabled):
             return
         try:
-            self._client.post("/audit", json={
+            self._client.post(self._path("/audit"), json={
                 "service": self.service_name,
                 "event": event,
                 "entityId": entity_id,
