@@ -27,6 +27,18 @@ OPENAPI_TAGS = [
     {"name": "health", "description": "Service health & readiness."},
 ]
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
+    for _ in range(10):
+        try:
+            with engine.connect():
+                break
+        except OperationalError:
+            time.sleep(2)
+    Base.metadata.create_all(bind=engine)
+    yield  # Application runs here
+
 app = FastAPI(
     title="Employee Service",
     description=(
@@ -36,6 +48,7 @@ app = FastAPI(
     ),
     version="1.4.0",
     openapi_tags=OPENAPI_TAGS,
+    lifespan=lifespan,  # ensure DB readiness is part of app lifecycle
 )
 
 # CORS
@@ -52,18 +65,6 @@ app.mount(
     StaticFiles(directory=os.getenv("STORAGE_PATH", "storage")),
     name="files",
 )
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup logic
-    for _ in range(10):
-        try:
-            with engine.connect():
-                break
-        except OperationalError:
-            time.sleep(2)
-    Base.metadata.create_all(bind=engine)
-    yield  # Application runs here
 
 @app.get("/health", tags=["health"], summary="Health check", responses={
     200: {

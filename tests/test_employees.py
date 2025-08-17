@@ -57,7 +57,7 @@ def test_create_read_update_delete_employee(client):
 def fake_reservation(monkeypatch):
     async def fake_get(self, employee_id):
         return [{"id": 1, "employee_id": employee_id, "date": "2025-01-01", "time_from": "09:00:00", "time_to": "10:00:00"}]
-    from app.services.interop_client import ReservationServiceClient
+    from app.services.reservation_client import ReservationServiceClient
     monkeypatch.setattr(ReservationServiceClient, "get_reservations_for_employee", fake_get)
 
 def test_get_reservations(client):

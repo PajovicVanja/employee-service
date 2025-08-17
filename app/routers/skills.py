@@ -13,13 +13,14 @@ router = APIRouter()
     response_model=List[schemas.EmployeeSkillOut],
     summary="List employee skills",
     responses={
-        200: {"description": "Skills list"},
+        200: {"description": "Skills list",
+              "content": {"application/json": {"example": [{"service_id": 7}, {"service_id": 9}]}}},
         404: {"model": schemas.Problem, "description": "Employee not found"},
         500: {"model": schemas.Problem, "description": "Server error"},
     },
 )
 def get_skills(
-    employee_id: int = Path(..., description="Employee ID"),
+    employee_id: int = Path(..., description="Employee ID", example=1),
     db: Session = Depends(get_db)
 ):
     if not crud.get_employee(db, employee_id):
@@ -31,14 +32,20 @@ def get_skills(
     response_model=List[schemas.EmployeeSkillOut],
     summary="Replace employee skills",
     responses={
-        200: {"description": "Skills replaced"},
-        400: {"model": schemas.Problem, "description": "Validation error"},
+        200: {"description": "Skills replaced",
+              "content": {"application/json": {"example": [{"service_id": 1}, {"service_id": 3}, {"service_id": 5}]}}},
+        400: {"model": schemas.Problem, "description": "Validation error (service not in employee's company)",
+              "content": {"application/json": {"example": {
+                  "type": "about:blank", "title": "Validation error", "status": 400,
+                  "detail": "service_id 42 does not belong to company_id 1",
+                  "instance": "/employees/1/skills/"
+              }}}},
         404: {"model": schemas.Problem, "description": "Employee not found"},
         500: {"model": schemas.Problem, "description": "Server error"},
     },
 )
 def replace_skills(
-    employee_id: int = Path(..., description="Employee ID"),
+    employee_id: int = Path(..., description="Employee ID", example=1),
     service_ids: List[int] = Body(
         ...,
         description="List of service IDs that this employee can perform",

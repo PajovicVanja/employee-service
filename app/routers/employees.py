@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from app import crud, schemas
 from app.dependencies import get_db
-from app.services.interop_client import ReservationServiceClient
+from app.services.reservation_client import ReservationServiceClient
 from app.services.company_client import CompanyServiceClient
 
 router = APIRouter()
@@ -27,13 +27,40 @@ def _validate_company_and_location(payload: schemas.EmployeeBase, client: Compan
     status_code=status.HTTP_201_CREATED,
     summary="Create employee",
     responses={
-        201: {"description": "Employee created"},
-        400: {"model": schemas.Problem, "description": "Validation error"},
+        201: {
+            "description": "Employee created",
+            "content": {"application/json": {"example": {
+                "id": 1, "idp_id": None, "first_name": "John", "last_name": "Doe",
+                "gender": True, "birth_date": "1990-01-01", "id_picture": None,
+                "active": True, "company_id": 1, "location_id": 12,
+                "availability": [], "skills": []
+            }}}
+        },
+        400: {
+            "model": schemas.Problem,
+            "description": "Validation error (e.g., unknown company/location)",
+            "content": {"application/json": {"example": {
+                "type": "about:blank", "title": "Validation error",
+                "status": 400, "detail": "company_id 999 not found", "instance": "/employees/"
+            }}}
+        },
         500: {"model": schemas.Problem, "description": "Server error"},
     },
 )
 def create_employee(
-    payload: schemas.EmployeeCreate = Body(..., description="New employee payload"),
+    payload: schemas.EmployeeCreate = Body(
+        ...,
+        description="New employee payload",
+        examples={
+            "minimal": {"summary": "Minimal", "value": {
+                "first_name": "John", "last_name": "Doe", "gender": True, "birth_date": "1990-01-01"
+            }},
+            "withIntegration": {"summary": "With company & location", "value": {
+                "first_name": "Ana", "last_name": "Kovač", "gender": False, "birth_date": "1995-06-15",
+                "company_id": 1, "location_id": 12
+            }},
+        }
+    ),
     db: Session = Depends(get_db),
 ):
     """
@@ -43,18 +70,25 @@ def create_employee(
     _validate_company_and_location(payload, CompanyServiceClient())
     emp = crud.create_employee(db, payload)
     return emp
+
 @router.get(
     "/",
     response_model=List[schemas.EmployeeOut],
     summary="List active employees",
     responses={
-        200: {"description": "Employees retrieved"},
+        200: {"description": "Employees retrieved",
+              "content": {"application/json": {"example": [{
+                  "id": 1, "first_name": "John", "last_name": "Doe", "gender": True,
+                  "birth_date": "1990-01-01", "active": True, "idp_id": None,
+                  "id_picture": None, "company_id": 1, "location_id": 12,
+                  "availability": [], "skills": []
+              }]}}},
         500: {"model": schemas.Problem, "description": "Server error"},
     },
 )
 def list_employees(
-    skip: int = Query(0, ge=0, description="Number of records to skip (pagination)"),
-    limit: int = Query(100, ge=1, le=1000, description="Max number of records to return"),
+    skip: int = Query(0, ge=0, description="Number of records to skip (pagination)", example=0),
+    limit: int = Query(100, ge=1, le=1000, description="Max number of records to return", example=50),
     db: Session = Depends(get_db),
 ):
     """Paginated list of active employees."""
@@ -65,13 +99,23 @@ def list_employees(
     response_model=schemas.EmployeeOut,
     summary="Get employee by ID",
     responses={
-        200: {"description": "Employee found"},
-        404: {"model": schemas.Problem, "description": "Employee not found"},
+        200: {"description": "Employee found",
+              "content": {"application/json": {"example": {
+                  "id": 1, "first_name": "John", "last_name": "Doe", "gender": True,
+                  "birth_date": "1990-01-01", "active": True, "idp_id": None,
+                  "id_picture": None, "company_id": 1, "location_id": 12,
+                  "availability": [], "skills": []
+              }}}},
+        404: {"model": schemas.Problem, "description": "Employee not found",
+              "content": {"application/json": {"example": {
+                  "type": "about:blank", "title": "Employee not found", "status": 404,
+                  "instance": "/employees/999"
+              }}}},
         500: {"model": schemas.Problem, "description": "Server error"},
     },
 )
 def get_employee(
-    employee_id: int = Path(..., description="Employee ID"),
+    employee_id: int = Path(..., description="Employee ID", example=1),
     db: Session = Depends(get_db)
 ):
     """Fetch a single employee by numeric ID."""
@@ -85,16 +129,26 @@ def get_employee(
     response_model=schemas.EmployeeOut,
     summary="Update employee",
     responses={
-        200: {"description": "Employee updated"},
+        200: {"description": "Employee updated",
+              "content": {"application/json": {"example": {
+                  "id": 1, "first_name": "Jane", "last_name": "Doe", "gender": False,
+                  "birth_date": "1992-02-02", "active": True, "idp_id": None,
+                  "id_picture": None, "company_id": 1, "location_id": 12,
+                  "availability": [], "skills": []
+              }}}},
         400: {"model": schemas.Problem, "description": "Validation error"},
         404: {"model": schemas.Problem, "description": "Employee not found"},
         500: {"model": schemas.Problem, "description": "Server error"},
     },
 )
 def update_employee(
-    employee_id: int = Path(..., description="Employee ID"),
+    employee_id: int = Path(..., description="Employee ID", example=1),
     payload: schemas.EmployeeUpdate = Body(
-        ..., description="Full employee payload to replace existing data"
+        ..., description="Full employee payload to replace existing data",
+        examples={"example": {"summary": "Replace full record", "value": {
+            "first_name": "Jane", "last_name": "Doe", "gender": False,
+            "birth_date": "1992-02-02", "active": True, "company_id": 1, "location_id": 12
+        }}}
     ),
     db: Session = Depends(get_db),
 ):
@@ -118,7 +172,7 @@ def update_employee(
     },
 )
 def delete_employee(
-    employee_id: int = Path(..., description="Employee ID"),
+    employee_id: int = Path(..., description="Employee ID", example=1),
     db: Session = Depends(get_db),
 ):
     """Soft-delete an employee by setting active to false."""
@@ -131,14 +185,21 @@ def delete_employee(
     response_model=List[schemas.Reservation],
     summary="List reservations for employee (via reservation service)",
     responses={
-        200: {"description": "Reservations retrieved"},
+        200: {"description": "Reservations retrieved",
+              "content": {"application/json": {"example": [{
+                  "id": 555, "employee_id": 1, "date": "2025-01-01", "time_from": "09:00:00", "time_to": "10:00:00"
+              }]}}},
         404: {"model": schemas.Problem, "description": "Employee not found"},
-        502: {"model": schemas.Problem, "description": "Upstream reservation service error"},
+        502: {"model": schemas.Problem, "description": "Upstream reservation service error",
+              "content": {"application/json": {"example": {
+                  "type": "about:blank", "title": "Reservation service error: 503 Service Unavailable",
+                  "status": 502, "instance": "/employees/1/reservations"
+              }}}},
         500: {"model": schemas.Problem, "description": "Server error"},
     },
 )
 async def get_reservations(
-    employee_id: int = Path(..., description="Employee ID"),
+    employee_id: int = Path(..., description="Employee ID", example=1),
     db: Session = Depends(get_db),
 ):
     """
@@ -158,12 +219,20 @@ async def get_reservations(
     response_model=schemas.EmployeeContextOut,
     summary="Employee context (company, location, business hours from Company Service)",
     responses={
-        200: {"description": "Merged view resolved from Company Service (if configured)"},
+        200: {"description": "Merged view resolved from Company Service (if configured)",
+              "content": {"application/json": {"example": {
+                  "employeeId": 1,
+                  "company": {"id": 1, "name": "Barber Shop", "email": "info@barber.si", "phone": "+38640111222"},
+                  "location": {"id": 12, "street": "Trg Leona", "number": "3", "parentLocationId": 1},
+                  "businessHours": [
+                      {"dayNumber": 1, "day": "MONDAY", "fromTime": "09:00:00", "toTime": "17:00:00"}
+                  ]
+              }}}},
         404: {"model": schemas.Problem, "description": "Employee not found"},
     },
 )
 def employee_context(
-    employee_id: int = Path(..., description="Employee ID"),
+    employee_id: int = Path(..., description="Employee ID", example=1),
     db: Session = Depends(get_db),
 ):
     emp = crud.get_employee(db, employee_id)

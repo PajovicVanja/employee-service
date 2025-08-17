@@ -86,13 +86,16 @@ def _validate_no_overlaps(db: Session, employee_id: int, slots: List[schemas.Ava
     response_model=List[schemas.AvailabilitySlotOut],
     summary="List availability slots",
     responses={
-        200: {"description": "Availability slots for employee"},
+        200: {"description": "Availability slots for employee",
+              "content": {"application/json": {"example": [{
+                  "id": 10, "day_of_week": 1, "time_from": "09:00:00", "time_to": "12:00:00", "location_id": 3
+              }]}}},
         404: {"model": schemas.Problem, "description": "Employee not found"},
         500: {"model": schemas.Problem, "description": "Server error"},
     },
 )
 def list_availability(
-    employee_id: int = Path(..., description="Employee ID"),
+    employee_id: int = Path(..., description="Employee ID", example=1),
     db: Session = Depends(get_db)
 ):
     if not crud.get_employee(db, employee_id):
@@ -105,14 +108,23 @@ def list_availability(
     response_model=List[schemas.AvailabilitySlotOut],
     summary="Add availability slots",
     responses={
-        200: {"description": "Slots created"},
-        400: {"model": schemas.Problem, "description": "Validation error"},
+        200: {"description": "Slots created",
+              "content": {"application/json": {"example": [
+                  {"id": 10, "day_of_week": 1, "time_from": "09:00:00", "time_to": "12:00:00", "location_id": 3},
+                  {"id": 11, "day_of_week": 3, "time_from": "13:00:00", "time_to": "17:00:00", "location_id": 3}
+              ]}}},
+        400: {"model": schemas.Problem, "description": "Validation error (overlap, out-of-bounds, bad location)",
+              "content": {"application/json": {"example": {
+                  "type": "about:blank", "title": "Validation error", "status": 400,
+                  "detail": "availability validation failed: overlaps=1, outOfBounds=0",
+                  "instance": "/employees/1/availability/"
+              }}}},
         404: {"model": schemas.Problem, "description": "Employee not found"},
         500: {"model": schemas.Problem, "description": "Server error"},
     },
 )
 def add_availability(
-    employee_id: int = Path(..., description="Employee ID"),
+    employee_id: int = Path(..., description="Employee ID", example=1),
     slots: List[schemas.AvailabilitySlotCreate] = Body(
         ...,
         description="One or more weekly availability slots",
@@ -143,8 +155,6 @@ def add_availability(
                 raise HTTPException(status_code=400, detail=f"location_id {lid} not found")
 
     # Optional: pre-validate with FAAS (overlaps + business-hours bounds)
-    # (We still keep FAAS for out-of-business-hours detection etc.,
-    # but overlap is now already enforced locally.)
     faas = FaaSClient()
     if faas.enabled():
         emp = crud.get_employee(db, employee_id)
@@ -179,13 +189,23 @@ def add_availability(
     summary="Delete an availability slot",
     responses={
         204: {"description": "Slot deleted"},
-        404: {"model": schemas.Problem, "description": "Employee or slot not found"},
+        404: {"model": schemas.Problem, "description": "Employee or slot not found",
+              "content": {"application/json": {"examples": {
+                  "employeeMissing": {"summary": "Unknown employee", "value": {
+                      "type": "about:blank", "title": "Employee not found", "status": 404,
+                      "instance": "/employees/999/availability/10"
+                  }},
+                  "slotMissing": {"summary": "Unknown slot", "value": {
+                      "type": "about:blank", "title": "Slot not found", "status": 404,
+                      "instance": "/employees/1/availability/999"
+                  }},
+              }}}},
         500: {"model": schemas.Problem, "description": "Server error"},
     },
 )
 def remove_availability(
-    employee_id: int = Path(..., description="Employee ID"),
-    slot_id: int = Path(..., description="Availability slot ID"),
+    employee_id: int = Path(..., description="Employee ID", example=1),
+    slot_id: int = Path(..., description="Availability slot ID", example=10),
     db: Session = Depends(get_db),
 ):
     if not crud.get_employee(db, employee_id):
