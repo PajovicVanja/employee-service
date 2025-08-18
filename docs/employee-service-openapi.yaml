@@ -1,0 +1,593 @@
+openapi: 3.1.0
+info:
+  title: Employee Service
+  version: "1.4.0"
+  description: |-
+    Manages employees, availability slots and skills.
+
+    Authentication & authorization are handled by the API Gateway. This service validates optional company/location/service data via Company Service when configured.
+tags:
+  - name: employees
+    description: Employee CRUD.
+  - name: availability
+    description: Per-employee weekly availability slots.
+  - name: skills
+    description: Per-employee service skills.
+  - name: health
+    description: Service health & readiness.
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+              example:
+                status: ok
+  /employees/:
+    post:
+      tags: [employees]
+      summary: Create employee
+      description: |-
+        Create a new employee. If COMPANY_SERVICE_URL is configured, company_id and
+        location_id (when provided) are validated against Company Service.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeCreate'
+      responses:
+        "201":
+          description: Employee created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeOut'
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    get:
+      tags: [employees]
+      summary: List active employees
+      description: Paginated list of active employees.
+      parameters:
+        - in: query
+          name: skip
+          schema: { type: integer, minimum: 0, default: 0 }
+          description: Number of records to skip (pagination)
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 1000, default: 100 }
+          description: Max number of records to return
+      responses:
+        "200":
+          description: Employees retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/EmployeeOut' }
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /employees/{employee_id}:
+    parameters:
+      - in: path
+        name: employee_id
+        required: true
+        schema: { type: integer }
+        description: Employee ID
+    get:
+      tags: [employees]
+      summary: Get employee by ID
+      responses:
+        "200":
+          description: Employee found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmployeeOut' }
+        "404":
+          description: Employee not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    put:
+      tags: [employees]
+      summary: Update employee
+      description: Update full employee record (validation against Company Service when configured).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmployeeUpdate' }
+      responses:
+        "200":
+          description: Employee updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmployeeOut' }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        "404":
+          description: Employee not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    delete:
+      tags: [employees]
+      summary: Delete (soft) employee
+      responses:
+        "204":
+          description: Employee deactivated
+        "404":
+          description: Employee not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /employees/{employee_id}/reservations:
+    parameters:
+      - in: path
+        name: employee_id
+        required: true
+        schema: { type: integer }
+        description: Employee ID
+    get:
+      tags: [employees]
+      summary: List reservations for employee (via reservation service)
+      description: Proxy call to the Reservation service. Requires RESERVATION_SERVICE_URL in the environment.
+      responses:
+        "200":
+          description: Reservations retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Reservation' }
+        "404":
+          description: Employee not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        "502":
+          description: Upstream reservation service error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /employees/{employee_id}/context:
+    parameters:
+      - in: path
+        name: employee_id
+        required: true
+        schema: { type: integer }
+        description: Employee ID
+    get:
+      tags: [employees]
+      summary: Employee context (company, location, business hours from Company Service)
+      responses:
+        "200":
+          description: Merged view resolved from Company Service (if configured)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmployeeContextOut' }
+        "404":
+          description: Employee not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /employees/{employee_id}/availability/:
+    parameters:
+      - in: path
+        name: employee_id
+        required: true
+        schema: { type: integer }
+        description: Employee ID
+    get:
+      tags: [availability]
+      summary: List availability slots
+      responses:
+        "200":
+          description: Availability slots for employee
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AvailabilitySlotOut' }
+        "404":
+          description: Employee not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    post:
+      tags: [availability]
+      summary: Add availability slots
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: '#/components/schemas/AvailabilitySlotCreate' }
+            examples:
+              twoSlots:
+                summary: Two slots in one request
+                value:
+                  - { day_of_week: 1, time_from: "09:00:00", time_to: "12:00:00", location_id: 3 }
+                  - { day_of_week: 3, time_from: "13:00:00", time_to: "17:00:00", location_id: 3 }
+      responses:
+        "200":
+          description: Slots created
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AvailabilitySlotOut' }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        "404":
+          description: Employee not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /employees/{employee_id}/availability/{slot_id}:
+    parameters:
+      - in: path
+        name: employee_id
+        required: true
+        schema: { type: integer }
+        description: Employee ID
+      - in: path
+        name: slot_id
+        required: true
+        schema: { type: integer }
+        description: Availability slot ID
+    delete:
+      tags: [availability]
+      summary: Delete an availability slot
+      responses:
+        "204":
+          description: Slot deleted
+        "404":
+          description: Employee or slot not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /employees/{employee_id}/skills/:
+    parameters:
+      - in: path
+        name: employee_id
+        required: true
+        schema: { type: integer }
+        description: Employee ID
+    get:
+      tags: [skills]
+      summary: List employee skills
+      responses:
+        "200":
+          description: Skills list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/EmployeeSkillOut' }
+        "404":
+          description: Employee not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    put:
+      tags: [skills]
+      summary: Replace employee skills
+      description: |
+        Example request
+        [1, 3, 5]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { type: integer }
+            examples:
+              basic:
+                summary: Replace with three services
+                value: [1, 3, 5]
+      responses:
+        "200":
+          description: Skills replaced
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/EmployeeSkillOut' }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        "404":
+          description: Employee not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+components:
+  schemas:
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+          default: "about:blank"
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+          nullable: true
+        instance:
+          type: string
+          nullable: true
+        extra:
+          type: object
+          additionalProperties: true
+          nullable: true
+      example:
+        type: about:blank
+        title: Not Found
+        status: 404
+        detail: Employee not found
+        instance: /employees/999
+    CompanyRef:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+      example:
+        id: 1
+        name: Barber Shop
+        email: info@barber.si
+        phone: "+38640111222"
+    LocationRef:
+      type: object
+      properties:
+        id: { type: integer }
+        street: { type: string, nullable: true }
+        number: { type: string, nullable: true }
+        parentLocationId: { type: integer, nullable: true }
+      example:
+        id: 12
+        street: Trg Leona
+        number: "3"
+        parentLocationId: 1
+    BusinessHoursDay:
+      type: object
+      properties:
+        dayNumber: { type: integer }
+        day: { type: string }
+        fromTime: { type: string, format: time }
+        toTime: { type: string, format: time }
+        pauseFrom: { type: string, format: time, nullable: true }
+        pauseTo: { type: string, format: time, nullable: true }
+      example:
+        dayNumber: 1
+        day: MONDAY
+        fromTime: "09:00:00"
+        toTime: "17:00:00"
+        pauseFrom: "12:00:00"
+        pauseTo: "12:30:00"
+    EmployeeContextOut:
+      type: object
+      properties:
+        employeeId: { type: integer }
+        company:
+          $ref: '#/components/schemas/CompanyRef'
+        location:
+          $ref: '#/components/schemas/LocationRef'
+        businessHours:
+          type: array
+          items: { $ref: '#/components/schemas/BusinessHoursDay' }
+      example:
+        employeeId: 7
+        company: { id: 1, name: Barber Shop }
+        location: { id: 12, street: Trg Leona, number: "3" }
+        businessHours:
+          - { dayNumber: 1, day: MONDAY, fromTime: "09:00:00", toTime: "17:00:00" }
+    AvailabilitySlotBase:
+      type: object
+      properties:
+        day_of_week: { type: integer }
+        time_from: { type: string, format: time }
+        time_to: { type: string, format: time }
+        location_id: { type: integer, nullable: true }
+      required: [day_of_week, time_from, time_to]
+      example:
+        day_of_week: 1
+        time_from: "09:00:00"
+        time_to: "17:00:00"
+        location_id: 3
+    AvailabilitySlotCreate:
+      allOf:
+        - $ref: '#/components/schemas/AvailabilitySlotBase'
+    AvailabilitySlotOut:
+      allOf:
+        - $ref: '#/components/schemas/AvailabilitySlotBase'
+        - type: object
+          properties:
+            id: { type: integer }
+          required: [id]
+      example:
+        id: 42
+        day_of_week: 1
+        time_from: "09:00:00"
+        time_to: "17:00:00"
+        location_id: 3
+    EmployeeSkillOut:
+      type: object
+      properties:
+        service_id: { type: integer }
+      required: [service_id]
+      example:
+        service_id: 7
+    EmployeeBase:
+      type: object
+      properties:
+        idp_id: { type: string, nullable: true }
+        first_name: { type: string }
+        last_name: { type: string }
+        gender: { type: boolean }
+        birth_date: { type: string, format: date }
+        id_picture: { type: string, nullable: true }
+        company_id: { type: integer, nullable: true }
+        location_id: { type: integer, nullable: true }
+      required: [first_name, last_name, gender, birth_date]
+      example:
+        idp_id: "auth0|abc123"
+        first_name: John
+        last_name: Doe
+        gender: true
+        birth_date: "1990-01-01"
+        id_picture: "/files/originals/1.jpg"
+        company_id: 1
+        location_id: 12
+    EmployeeCreate:
+      allOf:
+        - $ref: '#/components/schemas/EmployeeBase'
+    EmployeeUpdate:
+      allOf:
+        - $ref: '#/components/schemas/EmployeeBase'
+        - type: object
+          properties:
+            active: { type: boolean }
+          required: [active]
+      example:
+        idp_id: null
+        first_name: Jane
+        last_name: Doe
+        gender: false
+        birth_date: "1992-02-02"
+        id_picture: null
+        active: true
+        company_id: 1
+        location_id: 12
+    EmployeeOut:
+      allOf:
+        - $ref: '#/components/schemas/EmployeeBase'
+        - type: object
+          properties:
+            id: { type: integer }
+            active: { type: boolean }
+            availability:
+              type: array
+              items: { $ref: '#/components/schemas/AvailabilitySlotOut' }
+            skills:
+              type: array
+              items: { $ref: '#/components/schemas/EmployeeSkillOut' }
+          required: [id, active]
+      example:
+        id: 1
+        idp_id: "auth0|abc123"
+        first_name: John
+        last_name: Doe
+        gender: true
+        birth_date: "1990-01-01"
+        id_picture: "/files/originals/1.jpg"
+        active: true
+        company_id: 1
+        location_id: 12
+        availability:
+          - { id: 10, day_of_week: 1, time_from: "09:00:00", time_to: "17:00:00", location_id: 3 }
+        skills:
+          - { service_id: 7 }
+    Reservation:
+      type: object
+      properties:
+        id: { type: integer }
+        employee_id: { type: integer }
+        date: { type: string, format: date }
+        time_from: { type: string, format: time }
+        time_to: { type: string, format: time }
+      required: [id, employee_id, date, time_from, time_to]
+      example:
+        id: 555
+        employee_id: 1
+        date: "2025-01-01"
+        time_from: "09:00:00"
+        time_to: "10:00:00"
